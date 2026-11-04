@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our Photobooth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=DM+Sans:wght@400;500&display=swap">
+<style>
+:root{--bg:#e8eef9;--ink:#0f1b3d;--mute:#53608a;--card:#fff;--line:#c9d5ee;--accent:#3478e5;--accent-ink:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1226;--ink:#eaf0ff;--mute:#9aa8d0;--card:#151e3a;--line:#2a3763}}
+:root[data-theme="dark"]{--bg:#0c1226;--ink:#eaf0ff;--mute:#9aa8d0;--card:#151e3a;--line:#2a3763}
+*{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "DM Sans",system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
+h1{font:800 clamp(34px,7vw,60px)/1 "Bricolage Grotesque",system-ui,sans-serif;margin:8px 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.cam{position:relative;aspect-ratio:1;background:#000;border-radius:18px;overflow:hidden;border:3px solid var(--ink)}
+video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.count{position:absolute;inset:0;display:grid;place-items:center;font:800 min(40vw,220px)/1 "Bricolage Grotesque",sans-serif;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.5);pointer-events:none}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.flash.on{animation:fl .35s ease-out}
+@keyframes fl{from{opacity:.95}to{opacity:0}}
+.msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#fff;background:#000}
+.bar{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+button{font:500 16px "DM Sans",sans-serif;border:2px solid var(--ink);background:var(--card);color:var(--ink);padding:11px 18px;border-radius:12px;cursor:pointer}
+button.main{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500;padding:13px 26px;font-size:18px}
+select{width:100%;margin:6px 0 14px;font:inherit;padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+#l1[aria-pressed="true"],#l2[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.sw{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.sw button{width:36px;height:36px;padding:0;border-radius:50%;border:2px solid var(--line)}
+.sw button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+label{display:block;font-weight:500;margin-top:4px}
+input[type=text]{width:100%;margin:6px 0 14px;font:inherit;padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+.stripbox{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;text-align:center}
+canvas{max-width:100%;max-height:70vh;width:auto;height:auto;box-shadow:0 8px 24px rgba(15,27,61,.25)}
+.note{color:var(--mute);font-size:14px;min-height:21px;margin:8px 0 0}
+@media(prefers-reduced-motion:reduce){.flash.on{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Our photobooth</h1>
+<p class="sub">Four shots, three seconds apart. Pick a filter and a layout, then save in 4K. Squeeze in close and get ready to pose.</p>
+<div class="grid">
+  <section>
+    <div class="cam">
+      <video id="v" autoplay playsinline muted></video>
+      <div class="count" id="count"></div>
+      <div class="flash" id="flash"></div>
+      <div class="msg" id="msg"><div><p id="mt" style="margin:0 0 16px">Tap the button, then choose “Allow” when your browser asks to use the camera.</p><button class="main" id="allow">Allow camera</button></div></div>
+    </div>
+    <div class="bar">
+      <button class="main" id="go" disabled>Start photobooth</button>
+      <button id="flip" disabled>Switch camera</button>
+    </div>
+    <p class="note" id="status"></p>
+  </section>
+  <section class="stripbox">
+    <canvas id="strip" aria-label="Your photos"></canvas>
+    <div style="text-align:left;margin-top:14px">
+      <label>Layout</label>
+      <div class="bar" style="margin:6px 0 12px"><button id="l1" aria-pressed="true">Strip</button><button id="l2" aria-pressed="false">2×2 grid</button></div>
+      <label for="flt">Filter</label>
+      <select id="flt"></select>
+      <label>Frame color</label>
+      <div class="sw" id="sw"></div>
+      <label for="cap">Caption</label>
+      <input type="text" id="cap" maxlength="32" placeholder="Names or a date">
+      <div class="bar" style="margin:0"><button id="dl" disabled>Save</button><button id="dl4" class="main" disabled>Save in 4K</button></div>
+      <p class="note" id="dlnote"></p>
+    </div>
+  </section>
+</div>
+</main>
+<script>
+(function(){
+var N=4,S=720,PAD=40,GAP=24,FOOT=170;
+var colors=[["Blue","#3478e5","#ffffff"],["White","#f4f4f2","#0f1b3d"],["Pink","#f4a9c4","#4a1830"],["Black","#14151a","#ffffff"],["Sage","#a9c9b0","#17301f"],["Lilac","#c3b3ee","#26194f"]];
+var filters=[["Original","none"],["Black & white","grayscale(1) contrast(1.1)"],["Warm","sepia(.3) saturate(1.3) brightness(1.05)"],["Cool","saturate(1.1) hue-rotate(-15deg) brightness(1.05)"],["Vintage","sepia(.6) contrast(.9) brightness(1.05)"],["Soft glow","brightness(1.1) contrast(.85) saturate(1.2)"]];
+var cur=0,fi=0,grid=false,shots=[],busy=false,facing="user",stream=null,dlApi=null;
+var $=function(i){return document.getElementById(i)};
+var v=$("v"),cv=$("strip");
+var canF="filter" in cv.getContext("2d");
+function geo(){
+  if(grid){var W=PAD*2+S*2+GAP;return{W:W,H:PAD+S*2+GAP+FOOT,p:[[PAD,PAD],[PAD+S+GAP,PAD],[PAD,PAD+S+GAP],[PAD+S+GAP,PAD+S+GAP]]}}
+  var p=[];for(var i=0;i<N;i++)p.push([PAD,PAD+i*(S+GAP)]);
+  return{W:S+PAD*2,H:PAD+N*S+(N-1)*GAP+FOOT,p:p};
+}
+colors.forEach(function(c,i){var b=document.createElement("button");b.title=c[0];b.setAttribute("aria-label",c[0]+" frame");b.style.background=c[1];b.setAttribute("aria-pressed",i==0);b.onclick=function(){cur=i;[].forEach.call($("sw").children,function(x,j){x.setAttribute("aria-pressed",j==i)});show()};$("sw").appendChild(b)});
+filters.forEach(function(f,i){var o=document.createElement("option");o.value=i;o.textContent=f[0];$("flt").appendChild(o)});
+if(!canF){$("flt").disabled=true;$("flt").title="Filters aren’t supported in this browser"}
+$("flt").onchange=function(){fi=+this.value;v.style.filter=canF?filters[fi][1]:"none";show()};
+function setLayout(g){grid=g;$("l1").setAttribute("aria-pressed",!g);$("l2").setAttribute("aria-pressed",g);show()}
+$("l1").onclick=function(){setLayout(false)};$("l2").onclick=function(){setLayout(true)};
+$("cap").value=new Date().toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+$("cap").oninput=show;
+function draw(c,k){
+  var g=geo(),col=colors[cur];c.width=Math.round(g.W*k);c.height=Math.round(g.H*k);
+  var x=c.getContext("2d");x.setTransform(k,0,0,k,0,0);x.imageSmoothingQuality="high";
+  x.fillStyle=col[1];x.fillRect(0,0,g.W,g.H);
+  for(var i=0;i<N;i++){
+    var q=g.p[i];
+    if(shots[i]){x.save();if(canF)x.filter=filters[fi][1];x.drawImage(shots[i],q[0],q[1],S,S);x.restore()}
+    else{x.fillStyle=col[2];x.globalAlpha=.14;x.fillRect(q[0],q[1],S,S);x.globalAlpha=.5;x.font="700 120px sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillText(i+1,q[0]+S/2,q[1]+S/2);x.globalAlpha=1}
+  }
+  x.fillStyle=col[2];x.textAlign="center";x.textBaseline="middle";x.font="800 64px 'Bricolage Grotesque',sans-serif";
+  x.fillText($("cap").value,g.W/2,g.H-FOOT/2-6);
+}
+function show(){
+  draw(cv,1);var ok=shots.length>=N&&!!dlApi&&!busy;$("dl").disabled=!ok;$("dl4").disabled=!ok;
+}
+function startCam(){
+  if(stream)stream.getTracks().forEach(function(t){t.stop()});
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("mt").textContent="This browser can’t open the camera. Try Chrome or Safari.";return}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1920},height:{ideal:1920}},audio:false}).then(function(s){
+    stream=s;v.srcObject=s;$("msg").style.display="none";$("go").disabled=false;$("flip").disabled=false;v.style.transform=facing=="user"?"scaleX(-1)":"none";
+  }).catch(function(e){var n=e&&e.name;$("msg").style.display="grid";$("mt").textContent=n=="NotFoundError"?"No camera found on this device.":n=="NotReadableError"?"Another app is using your camera. Close it, then tap the button again.":"Camera access was blocked. Tap the lock or camera icon in your browser’s address bar, allow the camera, then tap the button again. If it still fails, open this page in its own tab.";$("allow").textContent="Try again";$("go").disabled=true});
+}
+function snap(){
+  var w=v.videoWidth,h=v.videoHeight,m=Math.min(w,h),o=Math.min(m,1440),c=document.createElement("canvas");c.width=c.height=o;
+  var x=c.getContext("2d");
+  if(facing=="user"){x.translate(o,0);x.scale(-1,1)}
+  x.drawImage(v,(w-m)/2,(h-m)/2,m,m,0,0,o,o);return c;
+}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
+async function run(){
+  if(busy)return;busy=true;shots=[];show();$("go").disabled=true;$("flip").disabled=true;
+  for(var i=0;i<N;i++){
+    $("status").textContent="Photo "+(i+1)+" of "+N;
+    for(var n=3;n>0;n--){$("count").textContent=n;await wait(1000)}
+    $("count").textContent="";
+    var f=$("flash");f.classList.remove("on");void f.offsetWidth;f.classList.add("on");
+    shots.push(snap());show();await wait(700);
+  }
+  busy=false;$("status").textContent="Done! Try a filter, layout or color, then save.";
+  $("go").textContent="Take new photos";$("go").disabled=false;$("flip").disabled=false;show();
+}
+$("go").onclick=run;
+$("flip").onclick=function(){facing=facing=="user"?"environment":"user";startCam()};
+function save(big){
+  var c=cv;
+  if(big){var g=geo(),k=3840/Math.max(g.W,g.H);c=document.createElement("canvas");draw(c,k)}
+  c.toBlob(function(b){
+    dlApi.save({filename:"photobooth-"+(grid?"grid":"strip")+(big?"-4k":"")+".png",data:b}).then(function(){$("dlnote").textContent="Saved."}).catch(function(e){$("dlnote").textContent=e&&e.code=="declined"?"":"Couldn’t save. Take a screenshot instead."});
+  },"image/png");
+}
+$("dl").onclick=function(){save(false)};
+$("dl4").onclick=function(){save(true)};
+show();$("allow").onclick=startCam;
+dlApi={save:function(o){var a=document.createElement("a");a.href=URL.createObjectURL(o.data);a.download=o.filename;document.body.appendChild(a);a.click();a.remove();return Promise.resolve()}};show();
+})();
+</script>
+</body>
+</html>
